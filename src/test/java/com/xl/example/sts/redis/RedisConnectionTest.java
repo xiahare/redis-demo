@@ -10,12 +10,23 @@ import org.springframework.test.context.junit4.SpringRunner;
 @SpringBootTest
 public class RedisConnectionTest {
 
+//    @Autowired
+//    private RedisTemplate<String,String> redisTemplate;
+//
+//
+//    
+//    @Test
+//    public void string(){
+//        redisTemplate.opsForValue().set("name","echo");
+//        System.out.println(redisTemplate.opsForValue().get("name"));
+//    }
+    
     @Autowired
-    private RedisTemplate<String,String> redisTemplate;
-
+    private RedisTemplate<String,Object> redisTemplate;
+    
     @Test
-    public void set(){
-        redisTemplate.opsForValue().set("name","echo");
+    public void object(){
+    	redisTemplate.opsForValue().set("name","echo");
         System.out.println(redisTemplate.opsForValue().get("name"));
     }
 
