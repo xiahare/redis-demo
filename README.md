@@ -1,4 +1,4 @@
-# springboot-redis-demo
+# redis HA demo with stateful async future
 
 Need to modify "redis address" in application.properties:
 
