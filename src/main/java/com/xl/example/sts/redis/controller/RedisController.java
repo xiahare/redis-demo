@@ -51,9 +51,7 @@ public class RedisController {
 	
 	@RequestMapping(value="cancel", method=RequestMethod.POST,produces="application/json")
 	public String cancel(String taskId) {
-    	
-        // TODO
-        
+		queryService.cancel(taskId);
         return "Success";
 	}
 	

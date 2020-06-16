@@ -5,11 +5,13 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.CacheConfig;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.EnableCaching;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
 
 import com.xl.example.sts.redis.model.AsyncTaskResult;
@@ -21,12 +23,13 @@ public class AsyncFutureResultCache {
 
 	protected final Logger logger = LoggerFactory.getLogger(AsyncFutureResultCache.class);
 	
-	private Map<String, AsyncTaskResult> runningTasks = new ConcurrentHashMap<String, AsyncTaskResult>(); // keep running tasks
+	@Autowired
+	private AsyncRunningTaskCache asyncRunningTaskCache;
 	
 	@Cacheable(key="#p0")
 	public AsyncTaskResult get(String tid) {
 
-		AsyncTaskResult runningTask = runningTasks.get(tid);
+		AsyncTaskResult runningTask = asyncRunningTaskCache.get(tid);
 		if( runningTask == null ) {
 			logger.info("======== Task ID is not found! Maybe it is removed or expired or NO Cache configurations !  .....");
 		}
@@ -38,9 +41,9 @@ public class AsyncFutureResultCache {
 	public AsyncTaskResult put(String tid, AsyncTaskResult asyncTaskResult) {
 		
 		if( AsyncTaskResultHelper.isRunning(asyncTaskResult) ) {
-			runningTasks.put(tid, asyncTaskResult);
+			asyncRunningTaskCache.put(tid, asyncTaskResult);
 		} else {
-			runningTasks.remove(tid);
+			asyncRunningTaskCache.remove(tid);
 		}
 		
 		return asyncTaskResult;
@@ -48,11 +51,20 @@ public class AsyncFutureResultCache {
 	
 	@CacheEvict(key="#p0")
 	public AsyncTaskResult remove(String tid) {
-		runningTasks.remove(tid);
+		asyncRunningTaskCache.remove(tid);
 		return null;
 	}
 	
 	public Map<String, AsyncTaskResult> getRunningTasks() {
-		return runningTasks;
+		return asyncRunningTaskCache.getRunningTasks();
+	}
+	
+	public AsyncTaskResult getRunningTask(String tid) {
+		return asyncRunningTaskCache.get(tid);
+	}
+	
+	public AsyncTaskResult getWithoutAnnotation(String tid) {
+		
+		return get(tid);
 	}
 }
