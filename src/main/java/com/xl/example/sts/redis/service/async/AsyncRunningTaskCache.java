@@ -41,6 +41,23 @@ public class AsyncRunningTaskCache {
 		return runningTask;
 	}
 	
+	public AsyncTaskResult getFromAll(String tid) {
+		
+		Set<String> runningTaskHashMapkeys = redisTemplate.keys(runningTaskHashMapKeyPattern());
+		if(CollectionUtils.isNotEmpty( runningTaskHashMapkeys ) ) {
+			for(String runningTaskHashMapkey : runningTaskHashMapkeys) {
+				AsyncTaskResult runningTask = (AsyncTaskResult)redisTemplate.opsForHash().get(runningTaskHashMapkey, tid);
+				if( runningTask!=null ) {
+					return runningTask;
+				}
+				
+			}
+
+		}
+		
+		return null;
+	}
+	
 	public AsyncTaskResult put(String tid, AsyncTaskResult asyncTaskResult) {
 		
 		redisTemplate.opsForHash().put(runningTaskHashMapKey(), tid, asyncTaskResult);
@@ -49,7 +66,20 @@ public class AsyncRunningTaskCache {
 	}
 	
 	public AsyncTaskResult remove(String tid) {
-		redisTemplate.opsForHash().delete(runningTaskHashMapKey(), tid);
+		
+		Set<String> runningTaskHashMapkeys = redisTemplate.keys(runningTaskHashMapKeyPattern());
+		if(CollectionUtils.isNotEmpty( runningTaskHashMapkeys ) ) {
+			for(String runningTaskHashMapkey : runningTaskHashMapkeys) {
+				AsyncTaskResult runningTask = (AsyncTaskResult)redisTemplate.opsForHash().get(runningTaskHashMapkey, tid);
+				if( runningTask!=null ) {
+					redisTemplate.opsForHash().delete(runningTaskHashMapKey(), tid);
+					return null;
+				}
+				
+			}
+
+		}
+		
 		refreshExpire();
 		return null;
 	}
@@ -67,10 +97,10 @@ public class AsyncRunningTaskCache {
 //		return asyncTaskResultMap;
 //	}
 	
-	public Map<String, AsyncTaskResult> getRunningTasks() {
+	public Map<String, AsyncTaskResult> getAllRunningTasks() {
 		Map<String, AsyncTaskResult> asyncTaskResultMap = new HashMap<String, AsyncTaskResult>();
 		
-		Set<String> runningTaskHashMapkeys = redisTemplate.keys(runningTaskHashMapKeyPrefix() + "*");
+		Set<String> runningTaskHashMapkeys = redisTemplate.keys(runningTaskHashMapKeyPattern());
 		if(CollectionUtils.isNotEmpty( runningTaskHashMapkeys ) ) {
 			for(String runningTaskHashMapkey : runningTaskHashMapkeys) {
 				Map<Object, Object> map = redisTemplate.opsForHash().entries(runningTaskHashMapkey);
@@ -99,6 +129,10 @@ public class AsyncRunningTaskCache {
 	
 	private String runningTaskHashMapKey() {
 		return runningTaskHashMapKeyPrefix() + RUNNING_TASK_UUID;
+	}
+	
+	private String runningTaskHashMapKeyPattern() {
+		return runningTaskHashMapKeyPrefix() + "*";
 	}
 	
 	private String runningTaskHashMapKeyPrefix() {

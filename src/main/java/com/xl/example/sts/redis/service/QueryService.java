@@ -93,7 +93,7 @@ public class QueryService {
 				return null;
 			}
 		}
-		return asyncFutureResultCache.get(taskId);
+		return taskResult;
 	}
 	
 	public Map<String, AsyncTaskResult> listRunningFutureResultsMap(String taskType) {

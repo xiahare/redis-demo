@@ -1,7 +1,6 @@
 package com.xl.example.sts.redis.service.async;
 
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -11,7 +10,6 @@ import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.EnableCaching;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
 
 import com.xl.example.sts.redis.model.AsyncTaskResult;
@@ -26,7 +24,7 @@ public class AsyncFutureResultCache {
 	@Autowired
 	private AsyncRunningTaskCache asyncRunningTaskCache;
 	
-	@Cacheable(key="#p0")
+	@Cacheable(key="#p0", unless="#result == null")
 	public AsyncTaskResult get(String tid) {
 
 		AsyncTaskResult runningTask = asyncRunningTaskCache.get(tid);
@@ -56,7 +54,7 @@ public class AsyncFutureResultCache {
 	}
 	
 	public Map<String, AsyncTaskResult> getRunningTasks() {
-		return asyncRunningTaskCache.getRunningTasks();
+		return asyncRunningTaskCache.getAllRunningTasks();
 	}
 	
 	public AsyncTaskResult getRunningTask(String tid) {
