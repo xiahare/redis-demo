@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: async-service-nodeport
+spec:
+  selector:
+      app: async
+  ports:
+    - name: http
+      port: 8080
+      protocol: TCP
+      targetPort: 8080
+      nodePort: 30080
+  type: NodePort

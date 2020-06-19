@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: async-deployment
+  labels:
+    app: async
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: async
+  template:
+    metadata:
+      labels:
+        app: async
+    spec:
+      containers:
+      - name: async
+        image: async:test
+        ports:
+        - containerPort: 8080
