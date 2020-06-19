@@ -20,7 +20,7 @@ public class AsyncRunningNativeCtrlCache {
 	}
 	
 	public FutureCtrl remove(String tid) {
-		System.out.println("FutureCtrl removed ");
+		System.out.println("FutureCtrl removed :" + tid);
 		return futureMap.remove(tid);
 	}
 	
