@@ -15,7 +15,6 @@ import org.springframework.cache.annotation.CacheConfig;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.scheduling.annotation.EnableScheduling;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import com.xl.example.sts.redis.model.AsyncTaskResult;
@@ -23,11 +22,10 @@ import com.xl.example.sts.redis.model.AsyncTaskResult;
 @Component
 @EnableCaching
 @CacheConfig(cacheNames="asyncRunningTaskCache")
-@EnableScheduling
 public class AsyncRunningTaskCache {
 	
 	protected final Logger logger = LoggerFactory.getLogger(AsyncRunningTaskCache.class);
-		
+	
 	@Autowired
     private RedisTemplate<String,Object> redisTemplate;
 	
@@ -36,6 +34,7 @@ public class AsyncRunningTaskCache {
 	public AsyncTaskResult get(String tid) {
 
 		AsyncTaskResult runningTask = (AsyncTaskResult)redisTemplate.opsForHash().get(runningTaskHashMapKey(), tid);
+		
 		refreshExpire();
 		
 		return runningTask;
@@ -61,6 +60,7 @@ public class AsyncRunningTaskCache {
 	public AsyncTaskResult put(String tid, AsyncTaskResult asyncTaskResult) {
 		
 		redisTemplate.opsForHash().put(runningTaskHashMapKey(), tid, asyncTaskResult);
+		
 		refreshExpire();
 		return asyncTaskResult;
 	}
@@ -84,18 +84,18 @@ public class AsyncRunningTaskCache {
 		return null;
 	}
 	
-//	public Map<String, AsyncTaskResult> getNativeRunningTasks() {
-//		Map<String, AsyncTaskResult> asyncTaskResultMap = new HashMap<String, AsyncTaskResult>();
-//		
-//		Map<Object, Object> map = redisTemplate.opsForHash().entries(runningTaskHashMapKey());
-//		if( map!=null ) {
-//			for (Entry<Object, Object> entry : map.entrySet()) {
-//				asyncTaskResultMap.put((String)entry.getKey(), (AsyncTaskResult)entry.getValue());
-//			}
-//		}
-//		refreshExpire();
-//		return asyncTaskResultMap;
-//	}
+	public Map<String, AsyncTaskResult> getNativeRunningTasks() {
+		Map<String, AsyncTaskResult> asyncTaskResultMap = new HashMap<String, AsyncTaskResult>();
+		
+		Map<Object, Object> map = redisTemplate.opsForHash().entries(runningTaskHashMapKey());
+		if( map!=null ) {
+			for (Entry<Object, Object> entry : map.entrySet()) {
+				asyncTaskResultMap.put((String)entry.getKey(), (AsyncTaskResult)entry.getValue());
+			}
+		}
+		refreshExpire();
+		return asyncTaskResultMap;
+	}
 	
 	public Map<String, AsyncTaskResult> getAllRunningTasks() {
 		Map<String, AsyncTaskResult> asyncTaskResultMap = new HashMap<String, AsyncTaskResult>();
@@ -116,7 +116,6 @@ public class AsyncRunningTaskCache {
 		return asyncTaskResultMap;
 	}
 	
-	@Scheduled(cron = "0/30 * * * * *")
 	public void refreshExpire() {
 		
 		try {

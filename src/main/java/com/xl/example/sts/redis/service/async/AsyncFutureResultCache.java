@@ -58,11 +58,7 @@ public class AsyncFutureResultCache {
 	}
 	
 	public AsyncTaskResult getRunningTask(String tid) {
-		return asyncRunningTaskCache.get(tid);
+		return asyncRunningTaskCache.getFromAll(tid);
 	}
-	
-	public AsyncTaskResult getWithoutAnnotation(String tid) {
-		
-		return get(tid);
-	}
+
 }

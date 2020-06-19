@@ -11,24 +11,38 @@ import java.util.concurrent.CompletableFuture;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.EnableScheduling;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import com.xl.example.sts.redis.model.AsyncTaskResult;
 import com.xl.example.sts.redis.service.async.AsyncFutureResultCache;
 import com.xl.example.sts.redis.service.async.AsyncQueryService;
+import com.xl.example.sts.redis.service.async.AsyncRunningNativeCtrlCache;
+import com.xl.example.sts.redis.service.async.AsyncRunningTaskCache;
 import com.xl.example.sts.redis.service.async.AsyncTaskResultHelper;
+import com.xl.example.sts.redis.service.async.FutureCtrl;
+import com.xl.example.sts.redis.service.async.Stopper;
+import com.xl.example.sts.redis.service.async.TaskStopException;
 import com.xl.example.sts.redis.utils.LocalHostUtil;
 
 @Service
+@EnableScheduling
 public class QueryService {
 	
 	protected final Logger logger = LoggerFactory.getLogger(QueryService.class);
-
+	
 	@Autowired
 	private AsyncQueryService asyncQueryService;
 	
 	@Autowired
 	protected AsyncFutureResultCache asyncFutureResultCache;
+
+	@Autowired
+	protected AsyncRunningNativeCtrlCache asyncRunningFutureCtrlCache;
+	
+	@Autowired
+	private AsyncRunningTaskCache asyncRunningTaskCache;
 	
 	static private Integer seq = 0;
 	
@@ -42,8 +56,13 @@ public class QueryService {
 		
 		asyncFutureResultCache.put(asyncTaskResult.getTaskId(),asyncTaskResult);
 		
+		FutureCtrl futureCtrl = new FutureCtrl();
+		Stopper stopper = new Stopper();
+		futureCtrl.setStopper(stopper);
 		// Start an async job
-		CompletableFuture<Object> completableFuture = asyncQueryService.asyncQuery(taskId, alivetime);
+		CompletableFuture<Object> completableFuture = asyncQueryService.asyncQuery(taskId, alivetime, stopper);
+		futureCtrl.setFuture(completableFuture);
+		asyncRunningFutureCtrlCache.put(taskId, futureCtrl);
 				
 		// update status running
 		asyncTaskResult = asyncFutureResultCache.get(taskId);
@@ -67,12 +86,12 @@ public class QueryService {
 				asyncTaskResultOld.setTaskStatus(AsyncTaskResult.TASK_STATUS_SUCCESS);
 				asyncTaskResultOld.setTaskResult(result);
 				
-//			} else if( TaskStopException.isStopException( taskError ) ) {
-//				// Stopped
-//				asyncTaskResultCache.setTaskStatus(AsyncTaskResult.TASK_STATUS_STOPPED);
-//				
+			} else if( TaskStopException.isStopException( taskError ) ) {
+				// Stopped
+				asyncTaskResultOld.setTaskStatus(AsyncTaskResult.TASK_STATUS_STOPPED);
+				
 			} else {
-				logger.error(taskError.getMessage());
+				logger.error(taskError.getMessage(),taskError);
 				// set errors : taskError
 				asyncTaskResultOld.setTaskStatus(AsyncTaskResult.TASK_STATUS_FAIL);
 				asyncTaskResultOld.setTaskError(taskError.getMessage());
@@ -80,6 +99,7 @@ public class QueryService {
 			}
 			
 			asyncFutureResultCache.put(taskId, asyncTaskResultOld);
+			asyncRunningFutureCtrlCache.remove(taskId); // Complete
 		});
 		
 		return taskId;
@@ -117,7 +137,19 @@ public class QueryService {
 	}
 	
 	public AsyncTaskResult cancel(String taskId) {
-		return asyncFutureResultCache.remove(taskId);
+		AsyncTaskResult result = asyncFutureResultCache.get(taskId);
+		if( result!=null ) {
+			result.setTaskStatus(AsyncTaskResult.TASK_STATUS_STOPPING);
+			asyncFutureResultCache.put(taskId, result);
+		}
+		
+		/* FutureCtrl removedFuture = asyncRunningFutureCache.remove(taskId);
+		 if( removedFuture!=null && removedFuture.getFuture()!=null ) {
+			 removedFuture.getFuture().cancel(true);
+		 }*/
+		 
+//		return asyncFutureResultCache.remove(taskId);
+		 return asyncFutureResultCache.get(taskId);
 	}
 	
 	public List<String> listRunningTasks(String taskType) {
@@ -133,5 +165,29 @@ public class QueryService {
 			
 		}
 		return "task-" + address + "-" + seq++;
+	}
+	
+	@Scheduled(cron = "0/30 * * * * *")
+	public void refreshExpire() {
+		asyncRunningTaskCache.refreshExpire();
+		
+		// stop
+		List<String> taskIdRunningSet = asyncRunningFutureCtrlCache.getRunningNativeCtrlMap();
+		if( taskIdRunningSet!=null ) {
+			for(String taskId : taskIdRunningSet) {
+				AsyncTaskResult taskResult = asyncFutureResultCache.get(taskId);
+				if( AsyncTaskResult.TASK_STATUS_STOPPING.equals( taskResult.getTaskStatus() ) ) {
+					FutureCtrl futureCrl = asyncRunningFutureCtrlCache.get(taskId);
+					if(futureCrl!=null ) {
+						if(futureCrl.getStopper()!=null) {
+							futureCrl.getStopper().setStopping(true);
+						}
+//						if(futureCrl.getFuture()!=null) {
+//							futureCrl.getFuture().cancel(true);
+//						}
+					}
+				}
+			}
+		}
 	}
 }

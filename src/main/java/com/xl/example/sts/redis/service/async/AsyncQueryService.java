@@ -9,14 +9,23 @@ import org.springframework.stereotype.Service;
 public class AsyncQueryService {
 
 	@Async
-	public CompletableFuture<Object> asyncQuery(String taskId, Integer alivetime) {
+	public CompletableFuture<Object> asyncQuery(String taskId, Integer alivetime, Stopper stopper) {
 		
 		try {
 			System.out.println(taskId + "  -  Starting sleep : " + alivetime + " seconds!" );
-			Thread.sleep(alivetime*1000);
+			for (int i = 0; i < alivetime; i++) {
+				if(stopper.isStopping()) {
+					System.out.println("Task is stopped:" + taskId);
+					throw new TaskStopException(taskId);
+				} else {
+					Thread.sleep(1000); // 1 second	
+					
+				}
+			}
+			
 			System.out.println(taskId + "  -  Ended sleep : " + alivetime + " seconds!" );
 		} catch (InterruptedException e) {
-			System.out.println(e);
+			System.out.println("Stopped Task:" + taskId);
 		}
 		
 		return CompletableFuture.completedFuture(alivetime);
