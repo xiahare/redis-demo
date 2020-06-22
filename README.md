@@ -17,7 +17,7 @@ localhost deploy:
 http://localhost:8080/swagger-ui.html
 ```
 
-k8s deploy ( k8s/async-deployment.yaml and k8s/async-service.yaml ):
+k8s deploy ( deploy files: buildDocker.sh , k8s/async-deployment.yaml , k8s/async-service.yaml ):
 
 ```
 http://<nodeIP>:30080/swagger-ui.html
