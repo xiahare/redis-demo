@@ -1,0 +1,7 @@
+version: "3.2"
+services:
+  redis:
+    image: "redis:latest"
+    command: redis-server --requirepass sOmE_sEcUrE_pAsS
+    ports:
+     - "6379:6379"
